@@ -783,7 +783,7 @@ window.aiClassify=(desc,hintId,catsId,pillCls)=>{
   hint.textContent='⏳ Classificando...';hint.className='ai-hint thinking';
   aiTimersMap[hintId]=setTimeout(async()=>{
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,
           messages:[{role:'user',content:`Classifique: "${desc}"\nCategorias: Alimentação|Saúde|Lazer|Vestuário|Transporte|Casa|Assinatura|Outros\nResponda SOMENTE JSON: {"cat":"<categoria>","conf":"alta|media","why":"<motivo curto>"}`}]})});
       const d=await r.json();
@@ -899,7 +899,7 @@ Formato: [{"desc":"NOME","val":99.90,"date":"2026-04-29","cat":"Alimentação","
 Parcelada: {"desc":"NOME","val":99.90,"date":"2026-04-29","cat":"Outros","parcel":{"atual":1,"total":6}}
 
 Retorne APENAS o array JSON.`;
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
         messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:prompt}]}]})});
     const d=await r.json();
@@ -1232,7 +1232,7 @@ window.sendChat=async()=>{
   box.innerHTML+=`<div class="typing" id="${tid}"><span></span><span></span><span></span></div>`;
   box.scrollTop=box.scrollHeight;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:buildCtx()+'\n\nPERGUNTA: '+msg}]})});
     const d=await r.json();
     const reply=(d.content?.[0]?.text||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
@@ -1248,7 +1248,7 @@ window.runDiag=async()=>{
   box.innerHTML+=`<div class="typing" id="${tid}"><span></span><span></span><span></span></div>`;
   box.scrollTop=box.scrollHeight;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:buildCtx()+'\n\nGere diagnóstico financeiro completo: 1) avaliação geral, 2) 3 principais problemas com valores específicos, 3) 3 ações práticas para este mês, 4) meta para 90 dias. Seja direto e use os números reais.'}]})});
     const d=await r.json();
     const reply=(d.content?.[0]?.text||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
