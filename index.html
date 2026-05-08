@@ -884,32 +884,56 @@ window.processPDF=async evt=>{
   const status=document.getElementById('pdfStatus');
   status.style.display='block';status.textContent='⏳ Lendo fatura Bradesco...';
   try{
+    // Check file size - Vercel limit is 4.5MB
+    if(file.size > 4*1024*1024){
+      status.textContent='⚠️ PDF muito grande. Tente usar a versão eletrônica da fatura (menor tamanho).';
+      return;
+    }
     const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-    status.textContent='🤖 Extraindo transações com IA...';
-    const prompt=`Esta é uma fatura do cartão de crédito Bradesco. Extraia TODAS as transações de compras/gastos e retorne SOMENTE um array JSON válido sem markdown.
+    status.textContent='🤖 Extraindo transações com IA... (pode levar 20-30 segundos)';
+    const prompt=`Esta é uma fatura do cartão de crédito Bradesco Elo. Extraia TODAS as transações de compras/gastos e retorne SOMENTE um array JSON válido sem markdown.
 
-Regras:
-1. Ignore: pagamentos (PAGTO), saldo anterior, IOF, créditos negativos
-2. Parceladas "(XX/YY)": extraia atual e total. Ex "MARCOVET (02/02)" = atual:2,total:2
-3. Datas: ABR/MAR/MAI 2026, NOV/DEZ 2025, AGO/JAN anteriores = 2025/2024
-4. Categorize: Alimentação(restaurantes,supermercados,delivery,padaria), Saúde(drogaria,farmácia), Lazer, Transporte(posto,estacionamento), Casa(lojas,utilidades), Assinatura(Netflix,Spotify,Amazon,Claude), Outros
-5. Valores sempre positivos em R$
+Regras importantes:
+1. Ignore completamente: PAGTO POR DEB, saldo anterior, IOF, créditos negativos (valores com -)
+2. Para parceladas com formato "XX/YY" no nome: {"atual":XX,"total":YY}. Ex: "MARCOVET 03/03" = atual:3,total:3
+3. Para datas: DEZ=dezembro, NOV=novembro, OUT=outubro, SET=setembro, AGO=agosto, JAN=janeiro. Ano: DEZ/NOV/OUT 2025, JAN 2026
+4. Categorize: Alimentação(restaurante,supermercado,ifood,grill,sushi,padaria,lanche,spoleto,mercadinho,savegnago), Saúde(drogao,drogaria,cobasi,farmacia,nutrition,boaforma), Lazer(cinema,decathlon,pbkids,brinquedo,livro), Transporte(uber,posto,estacionamento), Casa(amazon,magalu,utilidades,lojas), Assinatura(netflix,spotify,amazon prime), Outros
+5. Valores sempre positivos
 
-Formato: [{"desc":"NOME","val":99.90,"date":"2026-04-29","cat":"Alimentação","parcel":null}]
-Parcelada: {"desc":"NOME","val":99.90,"date":"2026-04-29","cat":"Outros","parcel":{"atual":1,"total":6}}
+Formato correto:
+[{"desc":"NOME DO ESTABELECIMENTO","val":99.90,"date":"2025-12-22","cat":"Alimentação","parcel":null}]
+Parcelada: {"desc":"NOME","val":99.90,"date":"2025-12-16","cat":"Casa","parcel":{"atual":1,"total":6}}
 
-Retorne APENAS o array JSON.`;
+Retorne APENAS o array JSON completo, sem texto antes ou depois.`;
+
     const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
-        messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:prompt}]}]})});
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+          {type:'text',text:prompt}
+        ]}]})});
+
+    if(!r.ok){
+      const err=await r.text();
+      status.textContent='❌ Erro do servidor: '+r.status+' - '+err.slice(0,100);
+      return;
+    }
+
     const d=await r.json();
+    if(d.error){status.textContent='❌ Erro da IA: '+d.error;return;}
+
     const txt=d.content?.[0]?.text||'[]';
-    pdfExtracted=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    const clean=txt.replace(/```json|```/g,'').trim();
+    const startIdx=clean.indexOf('[');
+    const endIdx=clean.lastIndexOf(']');
+    if(startIdx===-1||endIdx===-1){status.textContent='⚠️ Nenhuma transação encontrada. Verifique se é uma fatura Bradesco.';return;}
+    pdfExtracted=JSON.parse(clean.slice(startIdx,endIdx+1));
+
     if(!Array.isArray(pdfExtracted)||!pdfExtracted.length){status.textContent='⚠️ Nenhuma transação encontrada.';return;}
     renderPDFList();status.style.display='none';
     document.getElementById('pdfResultArea').style.display='block';
     showToast('✅ '+pdfExtracted.length+' transações encontradas!');
-  }catch(e){status.textContent='❌ Erro: '+e.message;}
+  }catch(e){status.textContent='❌ Erro: '+e.message;console.error(e);}
   evt.target.value='';
 };
 
