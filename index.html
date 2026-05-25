@@ -271,6 +271,31 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
 .pdf-chk input[type=checkbox]{width:15px;height:15px;cursor:pointer;}
 
 /* TOAST */
+
+/* Alert styles */
+.limit-bar{display:flex;align-items:center;gap:12px;background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:12px 16px;margin-bottom:14px;}
+.limit-bar.ok{border-color:rgba(22,120,58,.3);background:var(--inc-l);}
+.limit-bar.warn{border-color:rgba(230,126,34,.4);background:#fef9f0;}
+.limit-bar.over{border-color:rgba(192,57,43,.4);background:var(--ale-l);animation:pulse-border 1.5s infinite;}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.2);}50%{box-shadow:0 0 0 6px rgba(192,57,43,0);}}
+.limit-icon{font-size:1.4rem;flex-shrink:0;}
+.limit-info{flex:1;}
+.limit-title{font-size:.8rem;font-weight:700;margin-bottom:2px;}
+.limit-bar.ok .limit-title{color:var(--inc);}
+.limit-bar.warn .limit-title{color:#e67e22;}
+.limit-bar.over .limit-title{color:var(--ale);}
+.limit-desc{font-size:.72rem;color:var(--mut);}
+.limit-progress-wrap{width:120px;flex-shrink:0;}
+.limit-progress-bg{height:8px;background:rgba(0,0,0,.08);border-radius:100px;overflow:hidden;margin-bottom:3px;}
+.limit-progress-fill{height:100%;border-radius:100px;transition:width .5s ease;}
+.limit-pct{font-size:.68rem;font-weight:700;text-align:right;}
+.limit-settings{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.limit-set-label{font-size:.72rem;color:var(--mut);font-weight:600;}
+.limit-set-input{width:130px;background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;padding:6px 10px;font-family:'Space Grotesk',sans-serif;font-size:.82rem;color:var(--txt);outline:none;}
+.limit-set-input:focus{border-color:var(--txt);}
+.limit-set-btn{background:var(--txt);color:#f7f4ef;border:none;border-radius:8px;padding:6px 14px;font-family:'Space Grotesk',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;transition:opacity .2s;}
+.limit-set-btn:hover{opacity:.85;}
+
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--txt);color:#f7f4ef;border-radius:100px;padding:9px 20px;font-size:.8rem;font-weight:600;z-index:9999;transition:transform .3s ease;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 </style>
@@ -312,12 +337,12 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
     <button class="nbtn" onclick="showPage('aleatorio',this)">🎲 Aleatórios</button>
     <button class="nbtn" onclick="showPage('income',this)">💰 Entradas</button>
     <button class="nbtn" onclick="showPage('projecao',this)">📊 Projeção</button>
-    <button class="nbtn" onclick="showPage('pdf',this)">📄 Fatura PDF</button>
     <button class="nbtn" onclick="showPage('consultor',this)">🤖 Consultor IA</button>
   </div>
 
   <!-- DASHBOARD -->
   <div class="page active" id="pageDash">
+    <div id="dashAlerts" style="margin-bottom:14px"></div>
     <div class="dash-top">
       <div class="dcard dark">
         <div class="dcard-lbl">Saldo do Mês</div>
@@ -343,7 +368,34 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
 
   <!-- VISA -->
   <div class="page" id="pageVisa">
-    <div class="sec-hdr"><div><div class="sec-title">Bradesco Visa</div><div class="badge bv" style="margin-top:5px">💳 Cartão Visa</div></div></div>
+    <div class="sec-hdr">
+      <div><div class="sec-title">Bradesco Visa</div><div class="badge bv" style="margin-top:5px">💳 Cartão Visa</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-v btn-sm" onclick="document.getElementById('pdfFileVisa').click()">📄 Importar Fatura PDF</button>
+        <input type="file" id="pdfFileVisa" accept=".pdf" style="display:none" onchange="processPDF(event,'visa')">
+      </div>
+    </div>
+    <div id="pdfStatusVisa" style="display:none;background:var(--surf2);border-radius:10px;padding:10px 14px;font-size:.8rem;color:var(--mut);margin-bottom:14px"></div>
+    <div id="pdfResultAreaVisa" style="display:none;margin-bottom:18px">
+      <div class="panel">
+        <div class="ptitle" id="pdfResultTitleVisa">Transações encontradas</div>
+        <div id="pdfItemListVisa" style="max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-v" style="flex:1" id="pdfImportBtnVisa" onclick="importPDF('visa')">✓ Importar Selecionados</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pdfResultAreaVisa').style.display='none'">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--visa-l);border:1px solid rgba(26,58,107,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--visa);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      ℹ️ <strong>Visa — Fecha dia 27 · Vence dia 08:</strong> Compras até dia 27 → fatura do mês seguinte (vence dia 08). Após dia 27 → fatura de dois meses à frente.
+    </div>
+    <div id="visaAlertBar"></div>
+    <div class="limit-settings">
+      <span class="limit-set-label">🔔 Alerta de limite Visa:</span>
+      <input type="number" class="limit-set-input" id="visaLimitInput" placeholder="Ex: 1000,00" min="0" step="0.01">
+      <button class="limit-set-btn btn-v" onclick="saveLimit('visa')">Salvar limite</button>
+      <span id="visaLimitInfo" style="font-size:.72rem;color:var(--mut)"></span>
+    </div>
     <div class="twocol">
       <div class="panel">
         <div class="ptitle">Novo lançamento</div>
@@ -389,7 +441,34 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
 
   <!-- ELO -->
   <div class="page" id="pageElo">
-    <div class="sec-hdr"><div><div class="sec-title">Bradesco Elo</div><div class="badge be" style="margin-top:5px">💳 Cartão Elo</div></div></div>
+    <div class="sec-hdr">
+      <div><div class="sec-title">Bradesco Elo</div><div class="badge be" style="margin-top:5px">💳 Cartão Elo</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-e btn-sm" onclick="document.getElementById('pdfFileElo').click()">📄 Importar Fatura PDF</button>
+        <input type="file" id="pdfFileElo" accept=".pdf" style="display:none" onchange="processPDF(event,'elo')">
+      </div>
+    </div>
+    <div id="pdfStatusElo" style="display:none;background:var(--surf2);border-radius:10px;padding:10px 14px;font-size:.8rem;color:var(--mut);margin-bottom:14px"></div>
+    <div id="pdfResultAreaElo" style="display:none;margin-bottom:18px">
+      <div class="panel">
+        <div class="ptitle" id="pdfResultTitleElo">Transações encontradas</div>
+        <div id="pdfItemListElo" style="max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-e" style="flex:1" id="pdfImportBtnElo" onclick="importPDF('elo')">✓ Importar Selecionados</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pdfResultAreaElo').style.display='none'">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--elo-l);border:1px solid rgba(184,134,11,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--elo);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      ℹ️ <strong>Elo — Fecha dia 10 · Vence dia 20:</strong> Compras até dia 10 → fatura deste mês (vence dia 20). Após dia 10 → fatura do mês seguinte.
+    </div>
+    <div id="eloAlertBar"></div>
+    <div class="limit-settings">
+      <span class="limit-set-label">🔔 Alerta de limite Elo:</span>
+      <input type="number" class="limit-set-input" id="eloLimitInput" placeholder="Ex: 2000,00" min="0" step="0.01">
+      <button class="limit-set-btn btn-e" onclick="saveLimit('elo')">Salvar limite</button>
+      <span id="eloLimitInfo" style="font-size:.72rem;color:var(--mut)"></span>
+    </div>
     <div class="twocol">
       <div class="panel">
         <div class="ptitle">Novo lançamento</div>
@@ -455,7 +534,7 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
         <div class="ptitle">Nova conta em débito automático</div>
         <div class="row2">
           <div class="fld"><label>Nome</label><input type="text" id="debitoDesc" placeholder="Ex: Conta de Luz"></div>
-          <div class="fld"><label>Valor (R$)</label><input type="number" id="debitoVal" placeholder="0,00" min="0" step="0.01"></div>
+          <div class="fld"><label>Valor base (R$)</label><input type="number" id="debitoVal" placeholder="0,00" min="0" step="0.01"></div>
         </div>
         <div class="row2">
           <div class="fld"><label>Tipo</label>
@@ -466,6 +545,13 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
             </select>
           </div>
           <div class="fld"><label>Dia do débito</label><input type="number" id="debitoDia" placeholder="5" min="1" max="31"></div>
+        </div>
+        <div class="row2">
+          <div class="fld"><label>Início (mês/ano)</label><input type="month" id="debitoInicio"></div>
+          <div class="fld"><label>Término (deixe vazio = sem limite)</label><input type="month" id="debitoFim"></div>
+        </div>
+        <div style="background:var(--surf2);border-radius:9px;padding:10px 12px;font-size:.75rem;color:var(--mut);margin-bottom:12px">
+          💡 O valor base pode ser ajustado mês a mês diretamente no cartão da conta.
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-d" style="flex:1" onclick="addBill('debito')">+ Adicionar</button>
@@ -487,7 +573,7 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
         <div class="ptitle">Nova conta fixa manual</div>
         <div class="row2">
           <div class="fld"><label>Nome</label><input type="text" id="manualDesc" placeholder="Ex: Escola"></div>
-          <div class="fld"><label>Valor (R$)</label><input type="number" id="manualVal" placeholder="0,00" min="0" step="0.01"></div>
+          <div class="fld"><label>Valor base (R$)</label><input type="number" id="manualVal" placeholder="0,00" min="0" step="0.01"></div>
         </div>
         <div class="row2">
           <div class="fld"><label>Tipo</label>
@@ -497,6 +583,13 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
             </select>
           </div>
           <div class="fld"><label>Vencimento (dia)</label><input type="number" id="manualDia" placeholder="10" min="1" max="31"></div>
+        </div>
+        <div class="row2">
+          <div class="fld"><label>Início (mês/ano)</label><input type="month" id="manualInicio"></div>
+          <div class="fld"><label>Término (deixe vazio = sem limite)</label><input type="month" id="manualFim"></div>
+        </div>
+        <div style="background:var(--surf2);border-radius:9px;padding:10px 12px;font-size:.75rem;color:var(--mut);margin-bottom:12px">
+          💡 O valor base pode ser ajustado mês a mês diretamente no cartão da conta.
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-m" style="flex:1" onclick="addBill('manual')">+ Adicionar</button>
@@ -581,49 +674,6 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
       <button class="btn btn-dk btn-sm" onclick="renderProj()">↻ Atualizar</button>
     </div>
     <div class="proj-grid" id="projGrid"></div>
-  </div>
-
-  <!-- PDF -->
-  <div class="page" id="pagePDF">
-    <div class="sec-hdr"><div><div class="sec-title">Fatura PDF</div><div class="badge bv" style="margin-top:5px">📄 Importação automática</div></div></div>
-    <div class="twocol">
-      <div class="panel">
-        <div class="ptitle">Enviar fatura</div>
-        <div class="fld"><label>Cartão</label>
-          <div class="pills" id="pdfCardPills">
-            <div class="pill pv" data-v="visa" onclick="selPill(this,'pdfCardPills','pv');pdfCard='visa'">💳 Visa</div>
-            <div class="pill pe" data-v="elo" onclick="selPill(this,'pdfCardPills','pe');pdfCard='elo'">💳 Elo</div>
-          </div>
-        </div>
-        <div class="pdf-drop" onclick="document.getElementById('pdfFile').click()">
-          <div style="font-size:1.8rem;margin-bottom:6px">📄</div>
-          <div style="font-weight:600;font-size:.88rem;margin-bottom:4px">Clique para selecionar o PDF da fatura</div>
-          <div style="font-size:.74rem;color:var(--mut)">Bradesco Visa ou Elo — extração por IA</div>
-          <input type="file" id="pdfFile" accept=".pdf" onchange="processPDF(event)">
-        </div>
-        <div id="pdfStatus" style="font-size:.8rem;color:var(--mut);text-align:center;display:none;padding:8px 0"></div>
-        <div style="background:var(--surf2);border-radius:12px;padding:14px;margin-top:10px">
-          <div style="font-size:.72rem;font-weight:700;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Como funciona</div>
-          <div style="font-size:.76rem;color:var(--mut);line-height:1.7">
-            1. Selecione Visa ou Elo<br>
-            2. Faça upload do PDF da fatura Bradesco<br>
-            3. A IA extrai todas as transações<br>
-            4. Revise e selecione quais importar<br>
-            5. Clique em importar — pronto!
-          </div>
-        </div>
-      </div>
-      <div id="pdfResultArea" style="display:none">
-        <div class="panel">
-          <div class="ptitle" id="pdfResultTitle">Transações encontradas</div>
-          <div id="pdfItemList" style="max-height:420px;overflow-y:auto;margin-bottom:14px"></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-v" style="flex:1" id="pdfImportBtn" onclick="importPDF()">✓ Importar Selecionados</button>
-            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pdfResultArea').style.display='none'">Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- CONSULTOR IA -->
@@ -798,19 +848,75 @@ window.aiClassify=(desc,hintId,catsId,pillCls)=>{
 };
 
 // ── ADD TRANSACTIONS ───────────────────────────────────────────────────────
+/*
+  REGRAS DE FATURAMENTO:
+
+  ELO  — Fecha dia 10 — Vence dia 20
+    Compra até dia 10  → paga dia 20 do MESMO mês
+    Compra após dia 10 → paga dia 20 do MÊS SEGUINTE
+
+  VISA — Fecha dia 27 — Vence dia 08
+    Compra até dia 27  → paga dia 08 do MÊS SEGUINTE
+    Compra após dia 27 → paga dia 08 de DOIS MESES à frente
+*/
+function billingMonth(cardType, purchaseDate){
+  const d=new Date(purchaseDate+'T12:00:00');
+  const day=d.getDate();
+  const y=d.getFullYear();
+  const m=d.getMonth(); // 0-based
+
+  if(cardType==='elo'){
+    // Fecha dia 10, vence dia 20
+    // Até dia 10 → fatura do mesmo mês
+    // Após dia 10 → fatura do mês seguinte
+    if(day<=10){
+      return `${y}-${String(m+1).padStart(2,'0')}`;
+    } else {
+      const next=new Date(y,m+1,1);
+      return next.toISOString().slice(0,7);
+    }
+  } else {
+    // VISA — Fecha dia 27, vence dia 08
+    // Até dia 27 → fatura do mês seguinte (vence dia 08 do próximo mês)
+    // Após dia 27 → fatura de dois meses à frente
+    if(day<=27){
+      const next=new Date(y,m+1,1);
+      return next.toISOString().slice(0,7);
+    } else {
+      const next2=new Date(y,m+2,1);
+      return next2.toISOString().slice(0,7);
+    }
+  }
+}
+
 window.addCard=async t=>{
   const desc=document.getElementById(t+'Desc').value.trim();
   const val=parseFloat(document.getElementById(t+'Val').value);
   const date=document.getElementById(t+'Date').value||LS.currentMonth+'-01';
   if(!desc||isNaN(val)||val<=0){showToast('⚠️ Preencha descrição e valor!');return;}
-  const tx={desc,val,date,cat:sel[t].cat||'Outros',who,createdAt:serverTimestamp()};
+
+  // Calculate which billing month this purchase falls into
+  const billMth=billingMonth(t,date);
+  // Use billing month as the "date" for filtering purposes (keep purchase date for reference)
+  const tx={desc,val,date:billMth+'-01',purchaseDate:date,cat:sel[t].cat||'Outros',who,createdAt:serverTimestamp()};
+
   if(sel[t].parc==='parc'){
     const n=parseInt(document.getElementById(t+'PN').value);
     const a=parseInt(document.getElementById(t+'PA').value)||1;
     const pv=parseFloat(document.getElementById(t+'PV').value)||val/n;
     if(!n||n<2){showToast('⚠️ Informe nº de parcelas!');return;}
-    tx.parcel={total:n,atual:a,valorParc:pv,totalGasto:pv*n};tx.val=pv;
+    tx.parcel={total:n,atual:a,valorParc:pv,totalGasto:pv*n,billingStart:billMth};
+    tx.val=pv;
   }
+
+  // Show user which month it will fall into
+  const[by,bm]=billMth.split('-').map(Number);
+  const billLabel=MONTHS[bm-1]+'/'+by;
+  const purchDay=new Date(date+'T12:00:00').getDate();
+  const cutoffDay=t==='elo'?10:27;
+  const isNext= t==='visa'?(purchDay<=27):( purchDay>10);
+  const info=` · compra dia ${purchDay}`;
+
   const col=t==='visa'?'tx_visa':'tx_elo';
   try{
     await addDoc(collection(db,col),tx);
@@ -818,7 +924,7 @@ window.addCard=async t=>{
     ['PN','PA','PV'].forEach(s=>{const el=document.getElementById(t+s);if(el)el.value='';});
     document.getElementById(t+'AI').textContent='🤖 Digite para classificar automaticamente...';
     document.getElementById(t+'AI').className='ai-hint';
-    showToast('✅ Salvo!');
+    showToast('✅ Lançado na fatura de '+billLabel+info);
   }catch(e){showToast('❌ Erro ao salvar');}
 };
 
@@ -864,10 +970,15 @@ window.addBill=t=>{
   const val=parseFloat(document.getElementById(t+'Val').value);
   const tipo=document.getElementById(t+'Tipo').value;
   const dia=parseInt(document.getElementById(t+'Dia').value)||1;
+  const inicioEl=document.getElementById(t+'Inicio');
+  const fimEl=document.getElementById(t+'Fim');
+  const inicio=inicioEl?.value||LS.currentMonth;
+  const fim=fimEl?.value||'';
   if(!desc||isNaN(val)||val<=0){showToast('⚠️ Preencha nome e valor!');return;}
-  LS[t].push({id:Date.now(),desc,val,tipo,dia,pago:{}});
+  LS[t].push({id:Date.now(),desc,val,tipo,dia,inicio,fim,valMes:{},pago:{}});
   saveLS();renderAll();
   document.getElementById(t+'Desc').value='';document.getElementById(t+'Val').value='';
+  if(inicioEl)inicioEl.value='';if(fimEl)fimEl.value='';
   togForm(t+'Form');showToast('✅ Conta adicionada!');
 };
 window.delBill=(t,id)=>{LS[t]=LS[t].filter(b=>b.id!==id);saveLS();renderAll();};
@@ -877,11 +988,24 @@ window.togPago=(t,id)=>{
   if(!b.pago)b.pago={};b.pago[LS.currentMonth]=!b.pago[LS.currentMonth];
   saveLS();renderAll();
 };
+window.editValMes=(t,id)=>{
+  const b=LS[t].find(b=>b.id===id);if(!b)return;
+  const cur=b.valMes?.[LS.currentMonth]||b.val;
+  const novo=prompt(`Valor de ${mLabel(LS.currentMonth)} para "${b.desc}":`,cur.toFixed(2));
+  if(novo===null)return;
+  const n=parseFloat(novo.replace(',','.'));
+  if(isNaN(n)||n<0){showToast('⚠️ Valor inválido!');return;}
+  if(!b.valMes)b.valMes={};
+  b.valMes[LS.currentMonth]=n;
+  saveLS();renderAll();
+  showToast('✅ Valor atualizado para '+fmt(n));
+};
 
 // ── PDF ────────────────────────────────────────────────────────────────────
-window.processPDF=async evt=>{
+window.processPDF=async(evt,card)=>{
   const file=evt.target.files[0];if(!file)return;
-  const status=document.getElementById('pdfStatus');
+  const sfx=card==='visa'?'Visa':'Elo';
+  const status=document.getElementById('pdfStatus'+sfx);
   status.style.display='block';status.textContent='⏳ Lendo fatura Bradesco...';
   try{
     // Check file size - Vercel limit is 4.5MB
@@ -930,21 +1054,22 @@ Retorne APENAS o array JSON completo, sem texto antes ou depois.`;
     pdfExtracted=JSON.parse(clean.slice(startIdx,endIdx+1));
 
     if(!Array.isArray(pdfExtracted)||!pdfExtracted.length){status.textContent='⚠️ Nenhuma transação encontrada.';return;}
-    renderPDFList();status.style.display='none';
-    document.getElementById('pdfResultArea').style.display='block';
+    renderPDFList(card);status.style.display='none';
+    document.getElementById('pdfResultArea'+sfx).style.display='block';
     showToast('✅ '+pdfExtracted.length+' transações encontradas!');
   }catch(e){status.textContent='❌ Erro: '+e.message;console.error(e);}
   evt.target.value='';
 };
 
-function renderPDFList(){
+function renderPDFList(card){
   const total=pdfExtracted.reduce((s,t)=>s+(t.val||0),0);
   const catI={Alimentação:'🍽️',Saúde:'💊',Lazer:'🎮',Vestuário:'👗',Transporte:'🚗',Casa:'🏠',Assinatura:'📱',Outros:'📦'};
-  document.getElementById('pdfResultTitle').textContent=pdfExtracted.length+' transações — Total: R$ '+total.toFixed(2).replace('.',',');
-  const list=document.getElementById('pdfItemList');
+  const sfxL=card==='visa'?'Visa':'Elo';
+  document.getElementById('pdfResultTitle'+sfxL).textContent=pdfExtracted.length+' transações — Total: R$ '+total.toFixed(2).replace('.',',');
+  const list=document.getElementById('pdfItemList'+sfxL);
   list.innerHTML=`<div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">
-    <button onclick="pdfSelAll(true)" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:.7rem;cursor:pointer">Marcar todos</button>
-    <button onclick="pdfSelAll(false)" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:.7rem;cursor:pointer">Desmarcar</button>
+    <button onclick="pdfSelAll(true,card)" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:.7rem;cursor:pointer">Marcar todos</button>
+    <button onclick="pdfSelAll(false,card)" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:.7rem;cursor:pointer">Desmarcar</button>
   </div>`+
   pdfExtracted.map((t,i)=>`
     <div class="pdf-item">
@@ -957,28 +1082,53 @@ function renderPDFList(){
       </div>
       <span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--ale);white-space:nowrap">R$ ${(t.val||0).toFixed(2).replace('.',',')}</span>
     </div>`).join('');
-  updPDFTotal();
+  updPDFTotal(card);
 }
-window.pdfSelAll=v=>{pdfExtracted.forEach((_,i)=>{const el=document.getElementById('pc'+i);if(el)el.checked=v;});updPDFTotal();};
-window.updPDFTotal=()=>{
+window.pdfSelAll=(v,card)=>{pdfExtracted.forEach((_,i)=>{const el=document.getElementById('pc'+i);if(el)el.checked=v;});updPDFTotal(card);};
+window.updPDFTotal=(card)=>{
   let n=0,t=0;pdfExtracted.forEach((x,i)=>{const el=document.getElementById('pc'+i);if(el?.checked){n++;t+=x.val||0;}});
-  const btn=document.getElementById('pdfImportBtn');
+  const sfxT=card==='visa'?'Visa':'Elo';
+  const btn=document.getElementById('pdfImportBtn'+sfxT);
   if(btn)btn.textContent=`✓ Importar ${n} selecionados (R$ ${t.toFixed(2).replace('.',',')})`;
 };
-window.importPDF=async()=>{
-  const col=pdfCard==='visa'?'tx_visa':'tx_elo';
+window.importPDF=async(card)=>{
+  const col=card==='visa'?'tx_visa':'tx_elo';
   let count=0;
   for(let i=0;i<pdfExtracted.length;i++){
     if(!document.getElementById('pc'+i)?.checked)continue;
     const t=pdfExtracted[i];
-    const tx={desc:t.desc,val:parseFloat(t.val)||0,date:t.date||LS.currentMonth+'-01',cat:t.cat||'Outros',who,createdAt:serverTimestamp()};
-    if(t.parcel&&t.parcel.total>1){const r=t.parcel.total-t.parcel.atual+1;tx.parcel={total:t.parcel.total,atual:t.parcel.atual,valorParc:tx.val,totalGasto:tx.val*t.parcel.total};}
-    try{await addDoc(collection(db,col),tx);count++;}catch(e){}
+    const purchDate=t.date||LS.currentMonth+'-01';
+    const fullPurchDate=purchDate.length===7?purchDate+'-01':purchDate;
+
+    // Calculate the correct billing month based on purchase date and card rules
+    const billMth=billingMonth(card, fullPurchDate);
+
+    const tx={
+      desc:t.desc,
+      val:parseFloat(t.val)||0,
+      date:billMth+'-01',        // billing month (for filtering)
+      purchaseDate:fullPurchDate, // original purchase date (for display)
+      cat:t.cat||'Outros',
+      who,
+      createdAt:serverTimestamp()
+    };
+
+    if(t.parcel&&t.parcel.total>1){
+      tx.parcel={
+        total:t.parcel.total,
+        atual:t.parcel.atual,
+        valorParc:tx.val,
+        totalGasto:tx.val*t.parcel.total,
+        billingStart:billMth  // first billing month for this parcel
+      };
+    }
+
+    try{await addDoc(collection(db,col),tx);count++;}catch(e){console.error('Import error',e);}
   }
-  document.getElementById('pdfResultArea').style.display='none';
+  document.getElementById('pdfResultArea'+(card==='visa'?'Visa':'Elo')).style.display='none';
   pdfExtracted=[];
   showToast('✅ '+count+' transações importadas!');
-  showPage(pdfCard,document.querySelector('.nbtn'));
+  showPage(card,document.querySelector('.nbtn'));
 };
 
 // ── RENDER ─────────────────────────────────────────────────────────────────
@@ -986,7 +1136,7 @@ function renderAll(){
   document.getElementById('monthLbl').textContent=mLabel(LS.currentMonth);
   renderDash();renderCardList('visa');renderCardList('elo');
   renderAle();renderInc();renderBills('debito');renderBills('manual');
-  renderParcelas();renderProj();
+  renderParcelas();renderProj();renderAlerts();
   if(document.getElementById('pageConsultor').classList.contains('active'))updDiagCards();
 }
 
@@ -998,7 +1148,9 @@ function txItem(t,colKey){
   const color=colKey==='visa'?'var(--visa)':colKey==='elo'?'var(--elo)':colKey==='ale'?'var(--ale)':'var(--inc)';
   const bg=colKey==='visa'?'var(--visa-l)':colKey==='elo'?'var(--elo-l)':colKey==='ale'?'var(--ale-l)':'var(--inc-l)';
   const icon=catIco[t.cat]||catIco[t.type]||'📦';
-  const ds=t.date?new Date(t.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';
+  const dispDate=t.purchaseDate||t.date;
+  const ds=dispDate?new Date(dispDate+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'';
+  const billNote=t.purchaseDate&&t.date!==t.purchaseDate?` (fatura ${MONTHS[parseInt(t.date?.slice(5,7))-1]})`:'';;
   const wl=t.who==='fabio'?'Fabio':t.who==='lola'?'Lola':'';
   const pLabel=t.parcel?` · <span style="background:#e8edf8;color:#1a3a6b;font-size:.6rem;padding:1px 5px;border-radius:100px;font-weight:700">${t.parcel.atual}/${t.parcel.total}x · ${fmt(t.parcel.valorParc)}</span>`:'';
   const prefix=isInc?'+':'-';
@@ -1008,7 +1160,7 @@ function txItem(t,colKey){
       <div class="txname">${t.desc}</div>
       <div class="txmeta">
         ${wl?`<span class="who-chip ${t.who}">${wl}</span>`:''}
-        <span>${t.cat||t.type||''}</span>${pLabel}${ds?`<span>·</span><span>${ds}</span>`:''}
+        <span>${t.cat||t.type||''}</span>${pLabel}${ds?`<span>·</span><span>${ds}${billNote}</span>`:''}
         ${t.rec==='fixed'?'<span class="stbadge st-fix">Mensal</span>':''}
       </div>
     </div>
@@ -1017,10 +1169,25 @@ function txItem(t,colKey){
   </div>`;
 }
 
+// Get effective billing month for a transaction
+// New transactions: date is already billing month (YYYY-MM-01)
+// Old transactions: date is purchase date, recalculate
+function txBillingMonth(x, cardType){
+  if(!x.date) return LS.currentMonth;
+  // If transaction has purchaseDate field, it's new → date is already billing month
+  if(x.purchaseDate) return x.date.slice(0,7);
+  // For parcelas with billingStart, use that
+  if(x.parcel?.billingStart) return x.parcel.billingStart;
+  // Old transaction: recalculate billing month from purchase date
+  const purchDate = x.date.length > 7 ? x.date : x.date + '-01';
+  return billingMonth(cardType, purchDate);
+}
+
 function renderCardList(t){
   const colKey=t;
   const arr=t==='visa'?txVisa:txElo;
-  const filtered=arr.filter(x=>inM(x.date));
+  // Filter by billing month, not just date
+  const filtered=arr.filter(x=>txBillingMonth(x,t)===LS.currentMonth);
   const total=filtered.reduce((s,x)=>s+x.val,0);
   document.getElementById(t+'Total').textContent=fmt(total);
   const list=document.getElementById(t+'List');
@@ -1064,26 +1231,95 @@ function renderBills(t){
   const bg=t==='debito'?'var(--deb-l)':'var(--man-l)';
   const container=document.getElementById(t+'Bills');
   if(!LS[t].length){container.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Nenhuma conta cadastrada</div>';return;}
-  container.innerHTML=LS[t].map(b=>{
+
+  // Filter: only show bills active in current month
+  const activeBills=LS[t].filter(b=>{
+    // Check inicio: bill must have started
+    if(b.inicio&&LS.currentMonth<b.inicio)return false;
+    // Check fim: bill must not have ended
+    if(b.fim&&LS.currentMonth>b.fim)return false;
+    return true;
+  });
+  const inactiveBills=LS[t].filter(b=>{
+    if(b.inicio&&LS.currentMonth<b.inicio)return true;
+    if(b.fim&&LS.currentMonth>b.fim)return true;
+    return false;
+  });
+
+  const renderCard=(b,inactive=false)=>{
     const pago=b.pago?.[LS.currentMonth];
     const ico=tipoIco[b.tipo]||'📦';
-    return `<div class="bcard" style="border-color:${pago?col:'var(--bdr)'}">
+    // Use month-specific value if set, otherwise base value
+    const valAtual=b.valMes?.[LS.currentMonth]??b.val;
+    const isVarVal=b.valMes?.[LS.currentMonth]!==undefined&&b.valMes[LS.currentMonth]!==b.val;
+    const limiteLabel=b.fim?`<span style="font-size:.6rem;background:#fef3e2;color:#e67e22;padding:1px 6px;border-radius:100px;font-weight:700">até ${mLabel(b.fim)}</span>`:'';
+    const inicioLabel=b.inicio&&b.inicio!==LS.currentMonth?`<span style="font-size:.6rem;color:var(--mut)">desde ${mLabel(b.inicio)}</span>`:'';
+    const varLabel=isVarVal?`<span style="font-size:.6rem;background:var(--visa-l);color:var(--visa);padding:1px 6px;border-radius:100px;font-weight:700">valor editado</span>`:'';
+
+    return `<div class="bcard" style="border-color:${inactive?'#ddd':pago?col:'var(--bdr)'};opacity:${inactive?0.5:1}">
       <div class="bcard-top">
-        <div><div style="font-size:1.2rem;margin-bottom:3px">${ico}</div><div style="font-weight:700;font-size:.88rem">${b.desc}</div><div style="font-size:.68rem;color:var(--mut)">${b.tipo} · Dia ${b.dia}</div></div>
-        <div style="text-align:right"><div class="bcard-amt" style="color:${col}">${fmt(b.val)}</div><div style="margin-top:4px"><span class="stbadge ${pago?'st-ok':'st-pend'}">${pago?'✓ Pago':'⏳ Pendente'}</span></div></div>
+        <div>
+          <div style="font-size:1.2rem;margin-bottom:3px">${ico}</div>
+          <div style="font-weight:700;font-size:.88rem">${b.desc}</div>
+          <div style="font-size:.68rem;color:var(--mut);margin-top:2px">${b.tipo} · Dia ${b.dia}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${limiteLabel}${inicioLabel}${varLabel}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="bcard-amt" style="color:${inactive?'var(--mut)':col}">${fmt(valAtual)}</div>
+          ${isVarVal?`<div style="font-size:.62rem;color:var(--mut);text-decoration:line-through">${fmt(b.val)}</div>`:''}
+          <div style="margin-top:4px"><span class="stbadge ${inactive?'':''+( pago?'st-ok':'st-pend')}">${inactive?'Inativa':pago?'✓ Pago':'⏳ Pendente'}</span></div>
+        </div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
+      ${!inactive?`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <button class="toggle-btn" style="${pago?'background:'+bg+';border-color:'+col+';color:'+col:''}" onclick="togPago('${t}',${b.id})">${pago?'✓ Desmarcar':'Marcar pago'}</button>
+        <button class="toggle-btn" onclick="editValMes('${t}',${b.id})" title="Ajustar valor deste mês" style="color:var(--visa);border-color:var(--visa)">✏️ Editar valor</button>
         <button class="txdel" onclick="delBill('${t}',${b.id})" style="margin-left:auto">✕</button>
-      </div>
+      </div>`:`<div style="font-size:.72rem;color:var(--mut);text-align:center">Fora do período ativo<button class="txdel" onclick="delBill('${t}',${b.id})" style="margin-left:8px">✕</button></div>`}
     </div>`;
-  }).join('');
+  };
+
+  let html=activeBills.map(b=>renderCard(b,false)).join('');
+  if(inactiveBills.length){
+    html+=`<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:1px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">Fora do período</div>`;
+    html+=inactiveBills.map(b=>renderCard(b,true)).join('');
+  }
+  if(!activeBills.length&&!inactiveBills.length){
+    container.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Nenhuma conta cadastrada</div>';return;
+  }
+  container.innerHTML=html;
 }
 
 function renderParcelas(){
+  // All parceladas from both cards - NO month filter here
   const all=[...txVisa,...txElo].filter(x=>x.parcel);
-  const[cy,cm]=LS.currentMonth.split('-').map(Number);
   let totalAberto=0,totalMes=0;
+
+  // Calculate billing start month for any transaction (old or new)
+  function getFirstBillingMonth(x){
+    // New transactions: already have billingStart in parcel
+    if(x.parcel?.billingStart) return x.parcel.billingStart;
+    // New transactions: purchaseDate stored separately, date = billing month
+    if(x.purchaseDate) return x.date?.slice(0,7)||LS.currentMonth;
+    // Old transactions: recalculate from purchase date
+    const isVisa=txVisa.some(v=>v.id===x.id);
+    const cardType=isVisa?'visa':'elo';
+    const rawDate=x.date||LS.currentMonth+'-01';
+    const fullDate=rawDate.length===7?rawDate+'-01':rawDate;
+    return billingMonth(cardType, fullDate);
+  }
+
+  // Calculate last billing month of a parcel series
+  function lastBillingMonth(x){
+    const start=getFirstBillingMonth(x);
+    const[sy,sm]=start.split('-').map(Number);
+    const last=new Date(sy, sm-1+(x.parcel.total-1), 1);
+    return last.toISOString().slice(0,7);
+  }
+
+  // Separate: active (last parcel >= current month) vs finished
+  const active=all.filter(x=>lastBillingMonth(x)>=LS.currentMonth);
+  const finished=all.filter(x=>lastBillingMonth(x)<LS.currentMonth);
+
   if(!all.length){
     document.getElementById('parcList').innerHTML='<div class="empty"><div class="empty-icon">📅</div>Nenhuma compra parcelada</div>';
     document.getElementById('parcCount').textContent='0';
@@ -1091,55 +1327,104 @@ function renderParcelas(){
     document.getElementById('parcMes').textContent='R$ 0,00';
     return;
   }
-  const items=all.map(x=>{
+
+  function buildItem(x, isFinished=false){
     const p=x.parcel;
-    const[py,pm]=x.date.split('-').map(Number);
-    const restantes=p.total-p.atual+1;
-    const totalRest=p.valorParc*restantes;
-    totalAberto+=totalRest;
+    const firstBill=getFirstBillingMonth(x);
+    const[fby,fbm]=firstBill.split('-').map(Number);
+
+    // Build list of all billing months for this parcel
     const months=[];
     for(let i=0;i<p.total;i++){
-      const mn=new Date(py,pm-1+i,1);
+      const mn=new Date(fby,fbm-1+i,1);
       const ym=mn.toISOString().slice(0,7);
-      months.push({ym,num:i+1,label:MONTHS[parseInt(ym.split('-')[1])-1].slice(0,3)+'/'+ym.split('-')[0].slice(2)});
+      const mIdx=i+1; // parcel number (1-based)
+      months.push({
+        ym,
+        num:mIdx,
+        label:MONTHS[parseInt(ym.split('-')[1])-1].slice(0,3)+'/'+ym.split('-')[0].slice(2)
+      });
     }
-    const isCurMonth=months.some(m=>m.ym===LS.currentMonth&&m.num>=p.atual);
-    if(isCurMonth)totalMes+=p.valorParc;
-    const pct=Math.round((p.atual-1)/p.total*100);
-    const isVisa=txVisa.includes(x);
+
+    // Which parcel number falls in current month?
+    const curParcelIdx=months.findIndex(m=>m.ym===LS.currentMonth);
+    const isCurMonthActive=curParcelIdx>=0;
+
+    // Calculate remaining from current month onward
+    const restantes=isFinished?0:Math.max(0,p.total-Math.max(0,curParcelIdx));
+    const totalRest=p.valorParc*restantes;
+
+    if(!isFinished){
+      totalAberto+=totalRest;
+      if(isCurMonthActive) totalMes+=p.valorParc;
+    }
+
+    // Progress: how many billing months have passed up to current
+    const passedCount=Math.max(0,curParcelIdx);
+    const pct=isFinished?100:Math.round(passedCount/p.total*100);
+
+    const isVisa=txVisa.some(v=>v.id===x.id);
     const cardLabel=isVisa?'Visa':'Elo';
-    const cardCol=isVisa?'var(--visa)':'var(--elo)';
+    const cardCol=isFinished?'var(--mut)':isVisa?'var(--visa)':'var(--elo)';
     const cardBg=isVisa?'var(--visa-l)':'var(--elo-l)';
+
+    // Purchase date display
+    const purchDate=x.purchaseDate||x.date;
+    const purchDisplay=purchDate?new Date((purchDate.length===7?purchDate+'-01':purchDate)+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):'';
+
     const chips=months.map(m=>{
-      let cls=m.num<p.atual?'pm-done':m.ym===LS.currentMonth?'pm-cur':'pm-fut';
+      let cls;
+      if(isFinished) cls='pm-done';
+      else if(m.ym<LS.currentMonth) cls='pm-done';
+      else if(m.ym===LS.currentMonth) cls='pm-cur';
+      else cls='pm-fut';
       return `<div class="pm ${cls}">${m.label}·${m.num}ª</div>`;
     }).join('');
-    return `<div class="pitem">
+
+    return `<div class="pitem" style="opacity:${isFinished?0.5:1}">
       <div class="pitem-top">
-        <div><div style="font-weight:700;font-size:.9rem">${x.desc}</div><div style="font-size:.68rem;color:var(--mut);margin-top:2px">${x.cat} · ${x.date?new Date(x.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}):''}</div></div>
+        <div>
+          <div style="font-weight:700;font-size:.9rem">${x.desc}</div>
+          <div style="font-size:.68rem;color:var(--mut);margin-top:2px">${x.cat} · compra ${purchDisplay}</div>
+          <div style="font-size:.68rem;color:var(--mut);margin-top:1px">1ª fatura: ${MONTHS[fbm-1]}/${fby}</div>
+          ${isFinished?'<span style="font-size:.62rem;background:#eee;color:#999;padding:1px 7px;border-radius:100px;font-weight:700;margin-top:3px;display:inline-block">✓ Quitada</span>':''}
+        </div>
         <div style="text-align:right">
-          <span style="background:${cardBg};color:${cardCol};font-size:.68rem;padding:2px 8px;border-radius:100px;font-weight:700">${cardLabel}</span>
+          <span style="background:${cardBg};color:${isFinished?'var(--mut)':cardCol};font-size:.68rem;padding:2px 8px;border-radius:100px;font-weight:700">${cardLabel}</span>
           <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:${cardCol};margin-top:3px">${fmt(p.valorParc)}<span style="font-size:.65rem;font-weight:400;color:var(--mut)">/mês</span></div>
-          <div style="font-size:.68rem;color:var(--mut)">${p.atual}/${p.total} · total ${fmt(p.totalGasto||p.valorParc*p.total)}</div>
+          <div style="font-size:.68rem;color:var(--mut)">${isFinished?p.total+'/'+p.total:isCurMonthActive?(curParcelIdx+1)+'/'+p.total:'?/'+p.total} · total ${fmt(p.totalGasto||p.valorParc*p.total)}</div>
         </div>
       </div>
-      <div class="pitem-prog"><div style="width:${pct}%;background:${cardCol};height:100%;border-radius:100px;transition:width .6s"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:.66rem;color:var(--mut);margin-bottom:5px"><span>${p.atual-1} pagas</span><span>${restantes} restantes · ${fmt(totalRest)} em aberto</span></div>
+      <div class="pitem-prog"><div style="width:${pct}%;background:${isFinished?'#ccc':cardCol};height:100%;border-radius:100px;transition:width .6s"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:.66rem;color:var(--mut);margin-bottom:5px">
+        <span>${isFinished?'Todas pagas':passedCount+' pagas'}</span>
+        <span>${isFinished?'Quitada em '+MONTHS[parseInt(lastBillingMonth(x).split('-')[1])-1]+'/'+lastBillingMonth(x).split('-')[0]:restantes+' restantes · '+fmt(totalRest)+' em aberto'}</span>
+      </div>
       <div class="pitem-months">${chips}</div>
     </div>`;
-  });
-  document.getElementById('parcList').innerHTML=items.join('');
-  document.getElementById('parcCount').textContent=all.length;
+  }
+
+  // Only show active parcels - finished ones are hidden
+  let html=active.map(x=>buildItem(x,false)).join('');
+
+  document.getElementById('parcList').innerHTML=html||'<div class="empty"><div class="empty-icon">📅</div>Nenhuma compra parcelada</div>';
+  document.getElementById('parcCount').textContent=active.length;
   document.getElementById('parcTotal').textContent=fmt(totalAberto);
   document.getElementById('parcMes').textContent=fmt(totalMes);
 }
 
 function getMonthTotals(ym){
-  const visaT=txVisa.filter(x=>inM2(x.date,ym)).reduce((s,x)=>s+x.val,0);
-  const eloT=txElo.filter(x=>inM2(x.date,ym)).reduce((s,x)=>s+x.val,0);
+  const visaT=txVisa.filter(x=>txBillingMonth(x,'visa')===ym).reduce((s,x)=>s+x.val,0);
+  const eloT=txElo.filter(x=>txBillingMonth(x,'elo')===ym).reduce((s,x)=>s+x.val,0);
   const aleT=txAle.filter(x=>inM2(x.date,ym)).reduce((s,x)=>s+x.val,0);
-  const debT=LS.debito.reduce((s,b)=>s+b.val,0);
-  const manT=LS.manual.reduce((s,b)=>s+b.val,0);
+  // Bills: use month-specific value if set, filter by active period
+  const billVal=(b,ym)=>{
+    if(b.inicio&&ym<b.inicio)return 0;
+    if(b.fim&&ym>b.fim)return 0;
+    return b.valMes?.[ym]??b.val;
+  };
+  const debT=LS.debito.reduce((s,b)=>s+billVal(b,ym),0);
+  const manT=LS.manual.reduce((s,b)=>s+billVal(b,ym),0);
   const incF=LS.income_fixed.reduce((s,x)=>s+x.val,0);
   const incO=txInc.filter(x=>inM2(x.date,ym)).reduce((s,x)=>s+x.val,0);
   return{visa:visaT,elo:eloT,ale:aleT,deb:debT,man:manT,incF,incO,
@@ -1296,8 +1581,8 @@ window.exportCSV=()=>{
 };
 
 // ── NAVIGATION ─────────────────────────────────────────────────────────────
-const pageMap={dash:'pageDash',visa:'pageVisa',elo:'pageElo',parcelas:'pageParcelas',debito:'pageDebito',manual:'pageManual',aleatorio:'pageAleatorio',income:'pageIncome',projecao:'pageProjecao',pdf:'pagePDF',consultor:'pageConsultor'};
-const navCls={dash:'',visa:'av',elo:'ae',debito:'ad',manual:'am',aleatorio:'aa',income:'ai',projecao:'ac',pdf:'av',parcelas:'av',consultor:'ai'};
+const pageMap={dash:'pageDash',visa:'pageVisa',elo:'pageElo',parcelas:'pageParcelas',debito:'pageDebito',manual:'pageManual',aleatorio:'pageAleatorio',income:'pageIncome',projecao:'pageProjecao',consultor:'pageConsultor'};
+const navCls={dash:'',visa:'av',elo:'ae',debito:'ad',manual:'am',aleatorio:'aa',income:'ai',projecao:'ac',parcelas:'av',consultor:'ai'};
 window.showPage=(p,btn)=>{
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nbtn').forEach(x=>x.classList.remove('active','av','ae','ad','am','aa','ai','ac'));
@@ -1312,7 +1597,91 @@ function fmt(v){return(v||0).toLocaleString('pt-BR',{style:'currency',currency:'
 function saveLS(){localStorage.setItem(LOCAL,JSON.stringify(LS));}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 function emptyHTML(){return '<div class="empty"><div class="empty-icon">📭</div>Nenhum lançamento este mês</div>';}
-function initDates(){const d=new Date().toISOString().split('T')[0];['visaDate','eloDate','aleDate','incDate'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=d;});}
+function initDates(){
+  const d=new Date().toISOString().split('T')[0];
+  ['visaDate','eloDate','aleDate','incDate'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=d;});
+  ['debitoInicio','manualInicio'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=LS.currentMonth;});
+  // Pre-fill limit inputs with saved values
+  const limits=getLimits();
+  if(limits.visa){const el=document.getElementById('visaLimitInput');if(el)el.placeholder='Atual: '+fmt(limits.visa);}
+  if(limits.elo){const el=document.getElementById('eloLimitInput');if(el)el.placeholder='Atual: '+fmt(limits.elo);}
+}
+
+
+// ── LIMIT ALERTS ─────────────────────────────────────────────────────────
+function getLimits(){
+  return JSON.parse(localStorage.getItem('financemaster_limits')||'{}');
+}
+
+window.saveLimit=card=>{
+  const input=document.getElementById(card+'LimitInput');
+  const val=parseFloat(input.value);
+  if(isNaN(val)||val<=0){showToast('⚠️ Digite um valor válido!');return;}
+  const limits=getLimits();
+  limits[card]=val;
+  localStorage.setItem('financemaster_limits',JSON.stringify(limits));
+  input.value='';
+  const cardName=card==='visa'?'Visa':'Elo';
+  showToast('✅ Limite de '+fmt(val)+' salvo para o '+cardName+'!');
+  renderAlerts();
+};
+
+function renderAlerts(){
+  const limits=getLimits();
+  const visaT=txVisa.filter(x=>txBillingMonth(x,'visa')===LS.currentMonth).reduce((s,x)=>s+x.val,0);
+  const eloT=txElo.filter(x=>txBillingMonth(x,'elo')===LS.currentMonth).reduce((s,x)=>s+x.val,0);
+  const visaInfo=document.getElementById('visaLimitInfo');
+  const eloInfo=document.getElementById('eloLimitInfo');
+  if(visaInfo)visaInfo.textContent=limits.visa?'Limite atual: '+fmt(limits.visa):'Sem limite definido';
+  if(eloInfo)eloInfo.textContent=limits.elo?'Limite atual: '+fmt(limits.elo):'Sem limite definido';
+  renderCardAlert('visa',visaT,limits.visa);
+  renderCardAlert('elo',eloT,limits.elo);
+  renderDashAlerts(visaT,eloT,limits);
+}
+
+function renderCardAlert(card,spent,limit){
+  const barEl=document.getElementById(card+'AlertBar');
+  if(!barEl)return;
+  if(!limit){barEl.innerHTML='';return;}
+  const pct=Math.min(Math.round(spent/limit*100),100);
+  const isOver=spent>limit;
+  const isWarn=!isOver&&pct>=80;
+  const cls=isOver?'over':isWarn?'warn':'ok';
+  const icon=isOver?'🚨':isWarn?'⚠️':'✅';
+  const col=isOver?'var(--ale)':isWarn?'#e67e22':'var(--inc)';
+  const fillCol=isOver?'#c0392b':isWarn?'#e67e22':'#16783a';
+  const cardName=card==='visa'?'Visa':'Elo';
+  let msg='';
+  if(isOver) msg='Limite ultrapassado em '+fmt(spent-limit)+'! Gasto: '+fmt(spent)+' de '+fmt(limit);
+  else if(isWarn) msg='Atenção! '+pct+'% do limite atingido. Disponível: '+fmt(limit-spent);
+  else msg=fmt(spent)+' de '+fmt(limit)+' utilizados ('+pct+'%)';
+  const title=isOver?'⛔ Limite '+cardName+' ultrapassado!':isWarn?'⚠️ Limite '+cardName+' quase no teto':'✅ Cartão '+cardName+' dentro do limite';
+  barEl.innerHTML='<div class="limit-bar '+cls+'"><div class="limit-icon">'+icon+'</div><div class="limit-info"><div class="limit-title">'+title+'</div><div class="limit-desc">'+msg+'</div></div><div class="limit-progress-wrap"><div class="limit-progress-bg"><div class="limit-progress-fill" style="width:'+pct+'%;background:'+fillCol+'"></div></div><div class="limit-pct" style="color:'+col+'">'+pct+'%</div></div></div>';
+}
+
+function renderDashAlerts(visaT,eloT,limits){
+  const el=document.getElementById('dashAlerts');
+  if(!el)return;
+  const alerts=[];
+  ['visa','elo'].forEach(card=>{
+    const spent=card==='visa'?visaT:eloT;
+    const limit=limits[card];
+    if(!limit)return;
+    const pct=Math.min(Math.round(spent/limit*100),100);
+    const isOver=spent>limit;
+    const isWarn=!isOver&&pct>=80;
+    if(!isOver&&!isWarn)return;
+    const cardName=card==='visa'?'Visa':'Elo';
+    const cls=isOver?'over':'warn';
+    const icon=isOver?'🚨':'⚠️';
+    const fillCol=isOver?'#c0392b':'#e67e22';
+    const col=isOver?'var(--ale)':'#e67e22';
+    const title=isOver?'⛔ '+cardName+' ultrapassou o limite!':'⚠️ '+cardName+' — '+pct+'% do limite atingido';
+    const msg=isOver?'Gasto: '+fmt(spent)+' · Limite: '+fmt(limit)+' · Excesso: '+fmt(spent-limit):'Gasto: '+fmt(spent)+' · Disponível: '+fmt(limit-spent);
+    alerts.push('<div class="limit-bar '+cls+'"><div class="limit-icon">'+icon+'</div><div class="limit-info"><div class="limit-title">'+title+'</div><div class="limit-desc">'+msg+'</div></div><div class="limit-progress-wrap"><div class="limit-progress-bg"><div class="limit-progress-fill" style="width:'+pct+'%;background:'+fillCol+'"></div></div><div class="limit-pct" style="color:'+col+'">'+pct+'%</div></div></div>');
+  });
+  el.innerHTML=alerts.join('');
+}
 
 // ENTER KEYS
 document.addEventListener('keydown',e=>{
