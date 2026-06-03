@@ -386,8 +386,18 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
         </div>
       </div>
     </div>
-    <div style="background:var(--visa-l);border:1px solid rgba(26,58,107,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--visa);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-      ℹ️ <strong>Visa — Fecha dia 27 · Vence dia 08:</strong> Compras até dia 27 → fatura do mês seguinte (vence dia 08). Após dia 27 → fatura de dois meses à frente.
+    <div style="background:var(--visa-l);border:1px solid rgba(26,58,107,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:.76rem;color:var(--visa)">💳 <strong>Visa — Vence dia 08</strong> · Informe o dia em que a fatura fecha cada mês. Ex: Jun/2026 fecha dia 27 → período 28/mai a 27/jun → paga 08/jul</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:.72rem;color:var(--mut);font-weight:600">📅 Fechamento:</span>
+        <input type="month" id="visaClosingMonth" style="background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:.78rem;color:var(--txt);outline:none;width:150px">
+        <span style="font-size:.72rem;color:var(--mut)">Dia:</span>
+        <input type="number" id="visaClosingInput" placeholder="Ex: 27" min="1" max="31" style="background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:.78rem;color:var(--txt);outline:none;width:80px">
+        <button onclick="saveClosingDay('visa')" style="background:var(--visa);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-family:'Space Grotesk',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer">Salvar</button>
+        <div id="visaClosingInfo" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+      </div>
     </div>
     <div id="visaAlertBar"></div>
     <div class="limit-settings">
@@ -459,8 +469,18 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt
         </div>
       </div>
     </div>
-    <div style="background:var(--elo-l);border:1px solid rgba(184,134,11,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--elo);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-      ℹ️ <strong>Elo — Fecha dia 10 · Vence dia 20:</strong> Compras até dia 10 → fatura deste mês (vence dia 20). Após dia 10 → fatura do mês seguinte.
+    <div style="background:var(--elo-l);border:1px solid rgba(184,134,11,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:.76rem;color:var(--elo)">💳 <strong>Elo — Vence dia 20</strong> · Informe o dia em que a fatura fecha cada mês. Ex: Jun/2026 fecha dia 10 → período 11/mai a 10/jun → paga 20/jun</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:.72rem;color:var(--mut);font-weight:600">📅 Fechamento:</span>
+        <input type="month" id="eloClosingMonth" style="background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:.78rem;color:var(--txt);outline:none;width:150px">
+        <span style="font-size:.72rem;color:var(--mut)">Dia:</span>
+        <input type="number" id="eloClosingInput" placeholder="Ex: 10" min="1" max="31" style="background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:.78rem;color:var(--txt);outline:none;width:80px">
+        <button onclick="saveClosingDay('elo')" style="background:var(--elo);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-family:'Space Grotesk',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer">Salvar</button>
+        <div id="eloClosingInfo" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+      </div>
     </div>
     <div id="eloAlertBar"></div>
     <div class="limit-settings">
@@ -848,38 +868,90 @@ window.aiClassify=(desc,hintId,catsId,pillCls)=>{
 };
 
 // ── ADD TRANSACTIONS ───────────────────────────────────────────────────────
+// ── FECHAMENTO DE FATURA (dinâmico por mês) ──────────────────────────────
+// Fechamentos salvos no formato: {visa: {"2026-05": 27, "2026-06": 28}, elo: {"2026-05": 10}}
+function getClosingDays(){
+  return JSON.parse(localStorage.getItem('financemaster_closing')||'{"visa":{},"elo":{}}');
+}
+
+function getClosingDay(cardType, yearMonth){
+  const data=getClosingDays();
+  // Try exact month, then fall back to defaults
+  if(data[cardType]?.[yearMonth]) return data[cardType][yearMonth];
+  // Default fallbacks
+  return cardType==='elo' ? 10 : 27;
+}
+
+window.saveClosingDay=(card)=>{
+  const inputId=card+'ClosingInput';
+  const monthId=card+'ClosingMonth';
+  const day=parseInt(document.getElementById(inputId).value);
+  const month=document.getElementById(monthId).value;
+  if(!day||day<1||day>31){showToast('⚠️ Dia inválido!');return;}
+  if(!month){showToast('⚠️ Selecione o mês!');return;}
+  const data=getClosingDays();
+  if(!data[card])data[card]={};
+  data[card][month]=day;
+  localStorage.setItem('financemaster_closing',JSON.stringify(data));
+  document.getElementById(inputId).value='';
+  renderClosingInfo(card);
+  showToast('✅ Fechamento do '+(card==='visa'?'Visa':'Elo')+' em '+month+' salvo: dia '+day);
+};
+
+function renderClosingInfo(card){
+  const el=document.getElementById(card+'ClosingInfo');
+  if(!el)return;
+  const data=getClosingDays();
+  const months=Object.entries(data[card]||{}).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,3);
+  if(!months.length){el.innerHTML='<span style="color:var(--mut);font-size:.72rem">Usando padrão: dia '+(card==='elo'?10:27)+'</span>';return;}
+  el.innerHTML=months.map(([m,d])=>{
+    const[y,mo]=m.split('-').map(Number);
+    return '<span style="background:var(--surf2);border:1px solid var(--bdr);border-radius:100px;padding:2px 9px;font-size:.7rem;font-weight:600">'+MONTHS[mo-1].slice(0,3)+'/'+y+': dia '+d+'</span>';
+  }).join('');
+}
+
 /*
-  REGRAS DE FATURAMENTO:
+  LÓGICA DE FATURAMENTO:
 
-  ELO  — Fecha dia 10 — Vence dia 20
-    Compra até dia 10  → paga dia 20 do MESMO mês
-    Compra após dia 10 → paga dia 20 do MÊS SEGUINTE
+  ELO — Vence dia 20:
+    O fechamento define o último dia do período atual.
+    Exemplo: fecha dia 10/jun → período 11/mai a 10/jun → paga dia 20/jun
+    Compra até dia de fechamento → fatura do MESMO mês (paga dia 20)
+    Compra após dia de fechamento → fatura do MÊS SEGUINTE
 
-  VISA — Fecha dia 27 — Vence dia 08
-    Compra até dia 27  → paga dia 08 do MÊS SEGUINTE
-    Compra após dia 27 → paga dia 08 de DOIS MESES à frente
+  VISA — Vence dia 08:
+    O fechamento define o último dia do período atual.
+    Exemplo: fecha dia 27/jun → período 28/mai a 27/jun → paga dia 08/jul
+    Compra até dia de fechamento → fatura do MÊS SEGUINTE (paga dia 08)
+    Compra após dia de fechamento → fatura de DOIS MESES à frente
 */
 function billingMonth(cardType, purchaseDate){
   const d=new Date(purchaseDate+'T12:00:00');
   const day=d.getDate();
   const y=d.getFullYear();
   const m=d.getMonth(); // 0-based
+  const purchYM=`${y}-${String(m+1).padStart(2,'0')}`;
+
+  // Get closing day configured for this purchase month
+  const closingDay=getClosingDay(cardType, purchYM);
 
   if(cardType==='elo'){
-    // Fecha dia 10, vence dia 20
-    // Até dia 10 → fatura do mesmo mês
-    // Após dia 10 → fatura do mês seguinte
-    if(day<=10){
+    // ELO — Vence dia 20
+    // Compra até fechamento → paga dia 20 do MESMO mês
+    // Compra após fechamento → paga dia 20 do MÊS SEGUINTE
+    if(day<=closingDay){
       return `${y}-${String(m+1).padStart(2,'0')}`;
     } else {
       const next=new Date(y,m+1,1);
       return next.toISOString().slice(0,7);
     }
   } else {
-    // VISA — Fecha dia 27, vence dia 08
-    // Até dia 27 → fatura do mês seguinte (vence dia 08 do próximo mês)
-    // Após dia 27 → fatura de dois meses à frente
-    if(day<=27){
+    // VISA — Vence dia 08
+    // Compra até fechamento → paga dia 08 do MÊS SEGUINTE
+    // Compra após fechamento → paga dia 08 de DOIS MESES à frente
+    // Exemplo: fecha 27/jun, compra 15/jun → fatura jul (paga 08/jul) ✅
+    // Exemplo: fecha 27/jun, compra 28/jun → fatura ago (paga 08/ago) ✅
+    if(day<=closingDay){
       const next=new Date(y,m+1,1);
       return next.toISOString().slice(0,7);
     } else {
@@ -1605,6 +1677,11 @@ function initDates(){
   const limits=getLimits();
   if(limits.visa){const el=document.getElementById('visaLimitInput');if(el)el.placeholder='Atual: '+fmt(limits.visa);}
   if(limits.elo){const el=document.getElementById('eloLimitInput');if(el)el.placeholder='Atual: '+fmt(limits.elo);}
+  // Set closing month inputs to current month
+  ['visaClosingMonth','eloClosingMonth'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=LS.currentMonth;});
+  // Render closing history
+  renderClosingInfo('visa');
+  renderClosingInfo('elo');
 }
 
 
